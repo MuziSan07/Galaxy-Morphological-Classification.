@@ -98,24 +98,38 @@ pip install -r requirements.txt
 jupyter notebook notebooks/galaxy_classification.ipynb
 ```
 
-**Option B — Python script** (the same pipeline, version-controllable):
+**Option B — Command-line pipeline** (modular MVC package in `src/`):
 
 ```bash
-python src/galaxy_classification.py
+python -m src.main prepare              # build train/validation split from raw data
+python -m src.main eda                  # generate exploratory figures into outputs/
+python -m src.main train --epochs 100   # train the CNN and save the model
+python -m src.main evaluate             # confusion matrix + classification report
+python -m src.main predict --image path/to/galaxy.jpg
 ```
 
-> The script in `src/` is exported from the notebook. Review the data paths at the top before running — the original notebook was developed on Google Colab, so adjust the paths to your local `data/` folder.
+> Review the paths in [`src/config.py`](src/config.py) before running. The defaults expect the extracted Galaxy Zoo files in `data/raw/`.
 
 ---
 
 ## Project Structure
 
+The `src/` package follows the **Model–View–Controller (MVC)** pattern:
+
 ```
 Galaxy-Morphological-Classification/
 ├── src/
-│   └── galaxy_classification.py      # Python script version of the pipeline
+│   ├── config.py                     # Paths and hyperparameters
+│   ├── main.py                       # CLI entry point
+│   ├── model/                        # MODEL: data + CNN (domain logic)
+│   │   ├── data_model.py             #   loading, labelling, generators
+│   │   └── cnn_model.py              #   CNN architecture + persistence
+│   ├── view/                         # VIEW: presentation
+│   │   └── visualization.py          #   all plots and figures
+│   └── controller/                   # CONTROLLER: orchestration
+│       └── pipeline.py               #   prepare -> train -> evaluate -> predict
 ├── notebooks/
-│   └── galaxy_classification.ipynb   # Full pipeline: EDA -> augmentation -> CNN -> evaluation
+│   └── galaxy_classification.ipynb   # Original exploratory notebook
 ├── assets/
 │   ├── poster.png                    # Project poster
 │   └── intro_video.mp4               # Short introduction video
@@ -123,6 +137,15 @@ Galaxy-Morphological-Classification/
 ├── LICENSE                           # MIT License
 └── README.md
 ```
+
+**How the layers map to this project:**
+
+| Layer | Responsibility | Files |
+|-------|----------------|-------|
+| **Model** | Data preparation and the CNN itself | `model/data_model.py`, `model/cnn_model.py` |
+| **View** | Every plot and figure (no logic) | `view/visualization.py` |
+| **Controller** | Wires model + view into a workflow | `controller/pipeline.py` |
+| **Entry point** | Parses CLI commands | `main.py`, `config.py` |
 
 ---
 
